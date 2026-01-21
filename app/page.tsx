@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import LZString from "lz-string";
+
 import JSZip from "jszip";
 import { useMemo, useRef, useState } from "react";
 
@@ -24,6 +27,31 @@ export default function Page() {
   const [selectedCollections, setSelectedCollections] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<Item | null>(null);
+    
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+  
+    const params = new URLSearchParams(window.location.search);
+    const data = params.get("data");
+    if (!data) return;
+  
+    const payload = decodeShare(data);
+    if (!payload) return;
+  
+    const nextParsed = payloadToParsed(payload);
+    setParsed(nextParsed);
+  
+    const names = Object.keys(nextParsed.collections);
+    const all = new Set(names);
+    setSelectedCollections(all);
+    setExpanded(new Set(names));
+  
+    const firstCol = names.sort((a, b) => a.localeCompare(b))[0];
+    const firstItem = firstCol ? nextParsed.collections[firstCol]?.[0] : null;
+    setActive(firstItem ?? null);
+  
+    setStage("playlist");
+  }, []);
 
   // Step 2 search filter
   const [pickFilter, setPickFilter] = useState("");
@@ -271,6 +299,32 @@ export default function Page() {
                 </button>
               </div>
             </div>
+            
+           <div className="flex gap-2">
+             <button
+               className="flex-1 rounded border px-3 py-2 text-sm bg-white"
+               onClick={async () => {
+                 if (!parsed) return
+                 const payload = buildSharePayload(parsed, selectedCollections)
+                 const encoded = encodeShare(payload)
+                 const url = `${window.location.origin}${window.location.pathname}?data=${encoded}`
+                 await navigator.clipboard.writeText(url)
+                 alert("Share link copied")
+               }}
+             >
+               Copy share link
+             </button>
+           
+             <button
+               className="rounded border px-2 py-2 text-xs bg-white"
+               onClick={() => {
+                 window.history.replaceState({}, "", window.location.pathname)
+                 location.reload()
+               }}
+             >
+               Clear link
+             </button>
+           </div>
 
             {selectedSidebarCollections.map((name) => {
               const isOpen = expanded.has(name);
@@ -567,6 +621,61 @@ function InstagramEmbed({ url }: { url: string }) {
       allowFullScreen
     />
   );
+}
+
+
+type SharePayload = {
+  v: 1;
+  name?: string;
+  collections: Record<string, { title: string; url: string }[]>;
+};
+
+function buildSharePayload(
+  parsed: ParsedExport,
+  selected: Set<string>
+): SharePayload {
+  const collections: SharePayload["collections"] = {};
+  for (const name of Object.keys(parsed.collections)) {
+    if (!selected.has(name)) continue;
+    collections[name] = (parsed.collections[name] ?? []).map((it) => ({
+      title: it.title,
+      url: it.url,
+    }));
+  }
+  return { v: 1, collections };
+}
+
+function encodeShare(payload: SharePayload) {
+  const json = JSON.stringify(payload);
+  return LZString.compressToEncodedURIComponent(json);
+}
+
+function decodeShare(data: string): SharePayload | null {
+  const json = LZString.decompressFromEncodedURIComponent(data);
+  if (!json) return null;
+  const payload = JSON.parse(json);
+  if (!payload || payload.v !== 1 || !payload.collections) return null;
+  return payload as SharePayload;
+}
+
+function payloadToParsed(payload: SharePayload): ParsedExport {
+  const collections: Record<string, Item[]> = {};
+  const allItems: Item[] = [];
+
+  for (const [cName, list] of Object.entries(payload.collections)) {
+    collections[cName] = (list ?? []).map((x, i) => {
+      const it: Item = {
+        id: `${cName}-${i}-${Math.random().toString(16).slice(2)}`,
+        collection: cName,
+        title: x.title || x.url,
+        url: x.url,
+      };
+      allItems.push(it);
+      return it;
+    });
+  }
+
+  return { collections, allItems, warnings: [] };
 }
 
 function parseIg(u: string): { type: "p" | "reel" | "tv"; code: string } | null {
