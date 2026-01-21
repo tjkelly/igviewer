@@ -152,7 +152,7 @@ export default function Page() {
       {/* Sidebar */}
       <aside className="w-96 border-r bg-white p-4 overflow-auto">
         <div className="flex items-center justify-between mb-2">
-          <div className="text-xl font-semibold">IG Playlist – PROD CHECK</div>
+          <div className="text-xl font-semibold">IG Playlist</div>
 
           {stage !== "upload" && (
             <button
@@ -222,7 +222,7 @@ export default function Page() {
         )}
 
         {stage === "pick" && parsed && (
-          <div className="space-y-3">
+          <div className="h-[calc(100vh-140px)] flex flex-col">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-lg font-semibold">Step 2: Pick collections</div>
@@ -249,7 +249,7 @@ export default function Page() {
             {filteredCollectionNames.length === 0 ? (
               <div className="text-sm text-neutral-500">No matches</div>
             ) : (
-              <div className="space-y-1 mt-2">
+              <div className="mt-2 flex-1 overflow-auto pr-2">
                 {filteredCollectionNames.map((name) => (
                   <label key={name} className="flex items-center gap-2 text-sm">
                     <input
@@ -264,14 +264,27 @@ export default function Page() {
               </div>
             )}
 
-            <button
-              className="w-full rounded-xl bg-black text-white py-3 font-semibold disabled:opacity-60"
-              onClick={submitPicked}
-              disabled={selectedCollections.size === 0}
-              title={selectedCollections.size === 0 ? "Pick at least one collection" : ""}
-            >
-              Build playlists
-            </button>
+            <div className="sticky bottom-0 pt-3 bg-white">
+              <button
+                className="w-full rounded-xl bg-black text-white py-3 font-semibold"
+                onClick={submitPicked}
+                disabled={selectedCollections.size === 0}
+                title={selectedCollections.size === 0 ? "Pick at least one collection" : ""}
+              >
+                Build playlists
+              </button>
+            
+              {parsed.warnings.length > 0 && (
+                <div className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                  <div className="font-semibold mb-1">Notes</div>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {parsed.warnings.slice(0, 6).map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
 
             {parsed.warnings.length > 0 && (
               <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
