@@ -152,7 +152,7 @@ export default function Page() {
       {/* Sidebar */}
       <aside className="w-96 border-r bg-white p-4 overflow-auto">
         <div className="flex items-center justify-between mb-2">
-          <div className="text-xl font-semibold">IG Playlist</div>
+          <div className="text-xl font-semibold">IG Playlist – PROD CHECK</div>
 
           {stage !== "upload" && (
             <button
